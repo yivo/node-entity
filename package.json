@@ -1,19 +1,22 @@
 {
-  "name": "yivo-node-entity",
-  "version": "1.0.0",
-  "description": "mysql entity",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yivo/node-entity"
-  },
-  "author": "Yaroslav Konoplov",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/yivo/node-entity/issues"
-  },
-  "homepage": "https://github.com/yivo/node-entity"
+    "name": "yivo-node-entity",
+    "version": "1.0.0",
+    "description": "mysql entity",
+    "main": "directory/script.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yivo/node-entity"
+    },
+    "author": "Yaroslav Konoplov",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/yivo/node-entity/issues"
+    },
+    "homepage": "https://github.com/yivo/node-entity",
+    "files": [
+        "directory/script.js"
+    ]
 }
