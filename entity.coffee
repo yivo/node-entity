@@ -77,16 +77,16 @@ class Entity
 
   save: (cb) ->
     if not @isSaved()
-      @__insert cb
+      @insert cb
     else if @isDirty()
-      @__update cb
+      @update cb
     @
 
   saveSync: ->
     if not @isSaved()
-      @__insertSync()
+      @insertSync()
     else if @isDirty()
-      @__updateSync()
+      @updateSync()
     @__changes = null
     @
 
@@ -98,24 +98,24 @@ class Entity
     @set @constructor.statusAttribute, yes
     @saveSync()
 
-  __insert: (cb) ->
+  insert: (cb) ->
     @db().insert @tableName(), @querySerialize(), (err, o) =>
       unless err
         @attributes.id = o.insertId if o.insertId
         @__changes = null
       cb err, o if _.isFunction cb
 
-  __update: (cb) ->
+  update: (cb) ->
     tbl = @tableName()
     @db().where(id: @id()).update tbl, @querySerializeChanges(), (err, o) =>
       @__changes = null unless err
       cb err, o if _.isFunction cb
 
-  __insertSync: ->
+  insertSync: ->
     [o] = @db().insert.sync @db(), @tableName(), @querySerialize()
     @attributes.id = o.insertId if o.insertId
 
-  __updateSync: ->
+  updateSync: ->
     tbl = @tableName()
     @db().where(id: @id()).update.sync @db(), tbl, @querySerializeChanges()
 
