@@ -4,6 +4,9 @@ _         = require 'lodash'
 
 db = null
 
+isFalsy = (value) ->
+  value is undefined or value is null
+
 class Entity
 
   @attributes: null
@@ -27,7 +30,7 @@ class Entity
     !!@id
 
   isDirty: ->
-    @__isDirty
+    _.isObject @__changes
 
   set: (arg, newValue) ->
     if _.isObject arg
@@ -35,7 +38,10 @@ class Entity
       return @
 
     attrName = arg
-    @__isDirty ||= newValue isnt @attributes[attrName]
+    if newValue isnt @attributes[attrName]
+      @__changes = {} unless @isDirty()
+      @__changes[attrName] = newValue
+
     @attributes[attrName] = newValue
     @
 
@@ -45,15 +51,26 @@ class Entity
   serialize: ->
     _.extend id: @id, @attributes
 
-  querySerialize: ->
+  querySerialize: () ->
     result = _.pick @attributes, @constructor.attributes
+    @querySerializeFinale result
+
+  querySerializeChanges: ->
+    return unless @isDirty()
+    result = _.pick @__changes, @constructor.attributes
+    @querySerializeFinale result
+
+  querySerializeFinale: (result) ->
     defaults = @constructor.defaults
 
     if _.isObject defaults
       for own attrName, attrValue of defaults
-        result[attrName] = attrValue unless result[attrName]?
+        result[attrName] = attrValue if isFalsy result[attrName]
 
     delete result.id
+    is_deleted = @attributes.is_deleted
+    is_deleted = no if isFalsy is_deleted
+    result.is_deleted = is_deleted
     result
 
   save: (cb) ->
@@ -68,37 +85,37 @@ class Entity
       @__insertSync()
     else if @isDirty()
       @__updateSync()
-    @__isDirty = false
+    @__changes = null
     @
 
   remove: (cb) ->
-    @set 'is_deleted', true
+    @set 'is_deleted', yes
     @save cb
 
   removeSync: ->
-    @set 'is_deleted', true
+    @set 'is_deleted', yes
     @saveSync()
 
   __insert: (cb) ->
-    db.insert @tableName(), @querySerialize(), (err, o) =>
+    @db().insert @tableName(), @querySerialize(), (err, o) =>
       unless err
         @id = o.insertId
-        @__isDirty = false
+        @__changes = null
       cb err, o if _.isFunction cb
 
   __update: (cb) ->
     tbl = @tableName()
-    db.where(id: @id).update tbl, @querySerialize(), (err, o) =>
-      @__isDirty = not err
+    @db().where(id: @id).update tbl, @querySerializeChanges(), (err, o) =>
+      @__changes = null unless err
       cb err, o if _.isFunction cb
 
   __insertSync: ->
-    [o] = db.insert.sync db, @tableName(), @querySerialize()
+    [o] = @db().insert.sync @db(), @tableName(), @querySerialize()
     @id = o.insertId
 
   __updateSync: ->
     tbl = @tableName()
-    db.where(id: @id).update.sync db, tbl, @querySerialize()
+    @db().where(id: @id).update.sync @db(), tbl, @querySerialize()
 
   @db: ->
     db || (db = new Db.Adapter registry.get('db'))
@@ -106,7 +123,7 @@ class Entity
   @preprocessClassVariables: ->
     return if @__preprocessed
     @attributes = @attributes.split(@rAttributeDelimiter) if _.isString @attributes
-    @__preprocessed = true
+    @__preprocessed = yes
 
   @newSelect: ->
     select = @db().select ['id'].concat(@attributes)
