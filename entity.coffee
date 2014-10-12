@@ -18,18 +18,21 @@ class Entity
   @tableName: null
   @rAttributeDelimiter: /[\s,]+/
 
+  @idAttribute: 'id'
+  @statusAttribute: 'is_deleted'
+
   constructor: (attributes) ->
     @constructor.preprocessClassVariables()
-
-    attributes = {} unless _.isObject attributes
-    @attributes = attributes
-    @id = @attributes.id
-    delete @attributes.id
+    attributes = {} if not _.isObject(attributes) or _.isArray(attributes)
+    @attributes = @filterAttributes attributes
 
     defaults = @constructor.defaults
     if _.isObject defaults
       for own attrName, attrValue of defaults
         @attributes[attrName] = attrValue if isFalsy @attributes[attrName]
+
+    @id = @attributes.id
+    delete @attributes.id
 
   tableName: ->
     @constructor.tableName
@@ -40,17 +43,20 @@ class Entity
 
   isDirty: -> _.isObject @__changes
 
+  filterAttributes: (attributes) ->
+    _.pick attributes, @constructor.attributes
+
   set: (arg, newValue) ->
     if _.isObject arg
       @set attrName, newValue for own attrName, newValue of arg
       return @
 
     attrName = arg
-    if attrName in @constructor.attributes
-      if newValue isnt @attributes[attrName]
-        @__changes = {} unless @isDirty()
-        @__changes[attrName] = newValue
-      @attributes[attrName] = newValue
+    if newValue isnt @attributes[attrName]
+      @__changes = {} unless @isDirty()
+      @__changes[attrName] = newValue
+
+    @attributes[attrName] = newValue
     @
 
   get: (attrName) -> @attributes[attrName]
@@ -62,17 +68,17 @@ class Entity
     _.extend id: @id, @attributes
 
   querySerialize: () ->
-    @querySerializeFinale @serialize()
+    @querySerializeFinale @filterAttributes(@attributes)
 
   querySerializeChanges: ->
-    return unless @isDirty()
-    @querySerializeFinale @changes()
+    @querySerializeFinale(@filterAttributes(@__changes)) if @isDirty()
 
   querySerializeFinale: (result) ->
     delete result.id
-    is_deleted = @attributes.is_deleted
-    is_deleted = no if isFalsy is_deleted
-    result.is_deleted = is_deleted
+    statusAttr = @constructor.statusAttribute
+    isDeleted = @attributes[statusAttr]
+    isDeleted = no if isFalsy isDeleted
+    result[statusAttr] = isDeleted
     result
 
   save: (cb) ->
@@ -91,11 +97,11 @@ class Entity
     @
 
   remove: (cb) ->
-    @set 'is_deleted', yes
+    @set @constructor.statusAttribute, yes
     @save cb
 
   removeSync: ->
-    @set 'is_deleted', yes
+    @set @constructor.statusAttribute, yes
     @saveSync()
 
   __insert: (cb) ->
@@ -117,7 +123,7 @@ class Entity
 
   __updateSync: ->
     tbl = @tableName()
-    @db().where(id: @id).update.sync @db(), tbl, @querySerialize()
+    @db().where(id: @id).update.sync @db(), tbl, @querySerializeChanges()
 
   @db: ->
     db || (db = new Db.Adapter registry.get('db'))
@@ -125,11 +131,12 @@ class Entity
   @preprocessClassVariables: ->
     return if @__preprocessed
     @attributes = @attributes.split(@rAttributeDelimiter) if _.isString @attributes
+    @attributes.push @statusAttribute unless @statusAttribute in @attributes
     @__preprocessed = yes
 
   @newSelect: ->
     select = @db().select ['id'].concat(@attributes)
-    select.where 'is_deleted = 0'
+    select.where @constructor.statusAttribute + ' = 0'
     select
 
   @pullSelect: ->
