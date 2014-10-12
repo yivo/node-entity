@@ -1,5 +1,6 @@
 registry  = require 'yivo-node-registry'
 Db        = require 'mysql-activerecord'
+_         = require 'lodash'
 
 db = null
 
@@ -70,6 +71,14 @@ class Entity
     @__isDirty = false
     @
 
+  remove: (cb) ->
+    @set 'is_deleted', true
+    @save cb
+
+  removeSync: ->
+    @set 'is_deleted', true
+    @saveSync()
+
   __insert: (cb) ->
     db.insert @tableName(), @querySerialize(), (err, o) =>
       unless err
@@ -116,7 +125,7 @@ class Entity
 
   @where: (args...) ->
     @select ||= @newSelect()
-    @select args...
+    @select.where args...
     @
 
   @order: (attrName, direction = 'asc') ->
