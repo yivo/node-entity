@@ -136,7 +136,7 @@ class Entity
 
   @newSelect: ->
     select = @db().select ['id'].concat(@attributes)
-    select.where @constructor.statusAttribute + ' = 0'
+    select.where @statusAttribute + ' = 0'
     select
 
   @pullSelect: ->
