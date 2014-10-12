@@ -1,8 +1,12 @@
 registry  = require 'yivo-node-registry'
 Db        = require 'mysql-activerecord'
 _         = require 'lodash'
+log       = require('yivo-node-log').create 'Entity'
 
 db = null
+
+unless _.isFunction (->).sync
+  log.warn 'node-sync is not installed. Synchronous methods will cause errors'
 
 isFalsy = (value) ->
   value is undefined or value is null

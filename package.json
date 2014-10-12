@@ -22,7 +22,6 @@
   "dependencies": {
     "lodash": "^2.4.1",
     "mysql-activerecord": "^0.8.4",
-    "yivo-node-exception": "git+https://github.com/yivo/node-exception.git",
     "yivo-node-log": "git+https://github.com/yivo/node-log.git",
     "yivo-node-registry": "git+https://github.com/yivo/node-registry.git"
   }
