@@ -23,7 +23,7 @@ class Entity
   db: -> @constructor.db()
 
   isSaved: ->
-    @id? and @id isnt '0' and @id isnt 0
+    !!@id
 
   isDirty: ->
     @__isDirty
@@ -100,13 +100,24 @@ class Entity
     @__preprocessed = true
 
   @newSelect: ->
-    @db().select ['id'].concat(@attributes)
+    select = @db().select ['id'].concat(@attributes)
+    select.where 'is_deleted = 0'
+    select
+
+  @pullSelect: ->
+    select = @select || @newSelect()
+    @select = null
+    select
 
   @scope: (name, rule) ->
     @[name] = (args...) ->
-      @select = @newSelect() unless @select
-      @select.where if _.isFunction(rule) then rule args... else rule
+      @where if _.isFunction(rule) then rule args... else rule
       @
+
+  @where: (args...) ->
+    @select ||= @newSelect()
+    @select args...
+    @
 
   @order: (attrName, direction = 'asc') ->
     @select ||= @newSelect()
@@ -119,33 +130,34 @@ class Entity
     @
 
   @many: (cb) ->
-    select = @select || @newSelect()
-    @select = null
-    select.get @tableName, (err, results) =>
+    @pullSelect().get @tableName, (err, results) =>
       if err then results = []
       else results = (new @(result) for result in results)
       cb err, results
     @
 
   @manySync: ->
-    select = @select || @newSelect()
-    @select = null
+    select = @pullSelect()
     [results] = select.get.sync select, @tableName
     (new @(result) for result in results)
 
   @one: (cb) ->
     @limit 1
-    select = @select
-    @select = null
-    select.get @tableName, (err, results) =>
+    @pullSelect().get @tableName, (err, results) =>
       if not err and results[0] then result = new @(results[0])
       cb err, result
     @
 
   @oneSync: ->
     @limit 1
-    select = @select
+    select = @pullSelect()
     [results] = select.sync select, @tableName
     new @(results[0]) if results[0]
+
+  @byId: (id, cb) ->
+    @where(id: id).limit(1).one(cb) if id
+
+  @oneSync: (id) ->
+    @where(id: id).limit(1).oneSync() if id
 
 module.exports = Entity
