@@ -24,22 +24,20 @@ class Entity
   constructor: (attributes) ->
     @constructor.preprocessClassVariables()
     attributes = {} if not _.isObject(attributes) or _.isArray(attributes)
-
-    @id = attributes.id
-
-    @attributes = @filterAttributes attributes
-
+    attributes = @filterAttributes attributes
     defaults = @constructor.defaults
     if _.isObject defaults
       for own attrName, attrValue of defaults
-        @attributes[attrName] = attrValue if isFalsy @attributes[attrName]
+        attributes[attrName] = attrValue if isFalsy attributes[attrName]
+
+    @attributes = attributes
 
   tableName: ->
     @constructor.tableName
 
   db: -> @constructor.db()
 
-  isSaved: -> !!@id
+  isSaved: -> !!@attributes.id
 
   isDirty: -> _.isObject @__changes
 
@@ -52,6 +50,7 @@ class Entity
       return @
 
     attrName = arg
+
     if newValue isnt @attributes[attrName]
       @__changes = {} unless @isDirty()
       @__changes[attrName] = newValue
@@ -61,25 +60,20 @@ class Entity
 
   get: (attrName) -> @attributes[attrName]
 
+  id: ->
+    @attributes.id
+
   changes: ->
     _.clone @__changes if @isDirty()
 
   serialize: ->
-    _.extend id: @id, @attributes
+    _.clone @attributes
 
   querySerialize: () ->
-    @querySerializeFinale @filterAttributes(@attributes)
+    @filterAttributes(@attributes)
 
   querySerializeChanges: ->
-    @querySerializeFinale(@filterAttributes(@__changes)) if @isDirty()
-
-  querySerializeFinale: (result) ->
-    delete result.id
-    statusAttr = @constructor.statusAttribute
-    isDeleted = @attributes[statusAttr]
-    isDeleted = no if isFalsy isDeleted
-    result[statusAttr] = isDeleted
-    result
+    @filterAttributes(@__changes) if @isDirty()
 
   save: (cb) ->
     if not @isSaved()
@@ -107,23 +101,23 @@ class Entity
   __insert: (cb) ->
     @db().insert @tableName(), @querySerialize(), (err, o) =>
       unless err
-        @id = o.insertId
+        @attributes.id = o.insertId if o.insertId
         @__changes = null
       cb err, o if _.isFunction cb
 
   __update: (cb) ->
     tbl = @tableName()
-    @db().where(id: @id).update tbl, @querySerializeChanges(), (err, o) =>
+    @db().where(id: @id()).update tbl, @querySerializeChanges(), (err, o) =>
       @__changes = null unless err
       cb err, o if _.isFunction cb
 
   __insertSync: ->
     [o] = @db().insert.sync @db(), @tableName(), @querySerialize()
-    @id = o.insertId
+    @attributes.id = o.insertId if o.insertId
 
   __updateSync: ->
     tbl = @tableName()
-    @db().where(id: @id).update.sync @db(), tbl, @querySerializeChanges()
+    @db().where(id: @id()).update.sync @db(), tbl, @querySerializeChanges()
 
   @db: ->
     db || (db = new Db.Adapter registry.get('db'))
@@ -131,11 +125,14 @@ class Entity
   @preprocessClassVariables: ->
     return if @__preprocessed
     @attributes = @attributes.split(@rAttributeDelimiter) if _.isString @attributes
+
+    @attributes.unshift 'id' unless 'id' in @attributes
     @attributes.push @statusAttribute unless @statusAttribute in @attributes
+
     @__preprocessed = yes
 
   @newSelect: ->
-    select = @db().select ['id'].concat(@attributes)
+    select = @db().select @attributes
     select.where @statusAttribute + ' = 0'
     select
 
