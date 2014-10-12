@@ -26,11 +26,9 @@ class Entity
 
   db: -> @constructor.db()
 
-  isSaved: ->
-    !!@id
+  isSaved: -> !!@id
 
-  isDirty: ->
-    _.isObject @__changes
+  isDirty: -> _.isObject @__changes
 
   set: (arg, newValue) ->
     if _.isObject arg
@@ -45,8 +43,7 @@ class Entity
     @attributes[attrName] = newValue
     @
 
-  get: (attrName) ->
-    @attributes[attrName]
+  get: (attrName) -> @attributes[attrName]
 
   serialize: ->
     _.extend id: @id, @attributes
