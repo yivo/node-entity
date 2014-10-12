@@ -185,7 +185,10 @@ class Entity
   @byId: (id, cb) ->
     @where(id: id).limit(1).one(cb) if id
 
-  @oneSync: (id) ->
+  @byIdSync: (id) ->
     @where(id: id).limit(1).oneSync() if id
+
+  @create: (attributes) ->
+    new @(attributes)
 
 module.exports = Entity
