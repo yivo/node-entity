@@ -186,7 +186,7 @@ class Entity
   @oneSync: ->
     @limit 1
     select = @pullSelect()
-    [results] = select.sync select, @tableName
+    [results] = select.get.sync select, @tableName
     new @(results[0]) if results[0]
 
   @byId: (id, cb) ->
