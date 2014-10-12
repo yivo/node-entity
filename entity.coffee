@@ -20,10 +20,16 @@ class Entity
 
   constructor: (attributes) ->
     @constructor.preprocessClassVariables()
+
     attributes = {} unless _.isObject attributes
     @attributes = attributes
     @id = @attributes.id
     delete @attributes.id
+
+    defaults = @constructor.defaults
+    if _.isObject defaults
+      for own attrName, attrValue of defaults
+        @attributes[attrName] = attrValue if isFalsy @attributes[attrName]
 
   tableName: ->
     @constructor.tableName
@@ -40,34 +46,29 @@ class Entity
       return @
 
     attrName = arg
-    if newValue isnt @attributes[attrName]
-      @__changes = {} unless @isDirty()
-      @__changes[attrName] = newValue
-
-    @attributes[attrName] = newValue
+    if attrName in @constructor.attributes
+      if newValue isnt @attributes[attrName]
+        @__changes = {} unless @isDirty()
+        @__changes[attrName] = newValue
+      @attributes[attrName] = newValue
     @
 
   get: (attrName) -> @attributes[attrName]
+
+  changes: ->
+    _.clone @__changes if @isDirty()
 
   serialize: ->
     _.extend id: @id, @attributes
 
   querySerialize: () ->
-    result = _.pick @attributes, @constructor.attributes
-    @querySerializeFinale result
+    @querySerializeFinale @serialize()
 
   querySerializeChanges: ->
     return unless @isDirty()
-    result = _.pick @__changes, @constructor.attributes
-    @querySerializeFinale result
+    @querySerializeFinale @changes()
 
   querySerializeFinale: (result) ->
-    defaults = @constructor.defaults
-
-    if _.isObject defaults
-      for own attrName, attrValue of defaults
-        result[attrName] = attrValue if isFalsy result[attrName]
-
     delete result.id
     is_deleted = @attributes.is_deleted
     is_deleted = no if isFalsy is_deleted
