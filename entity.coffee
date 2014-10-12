@@ -24,15 +24,16 @@ class Entity
   constructor: (attributes) ->
     @constructor.preprocessClassVariables()
     attributes = {} if not _.isObject(attributes) or _.isArray(attributes)
+
+    @id = @attributes.id
+    delete @attributes.id
+
     @attributes = @filterAttributes attributes
 
     defaults = @constructor.defaults
     if _.isObject defaults
       for own attrName, attrValue of defaults
         @attributes[attrName] = attrValue if isFalsy @attributes[attrName]
-
-    @id = @attributes.id
-    delete @attributes.id
 
   tableName: ->
     @constructor.tableName
