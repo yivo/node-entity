@@ -16,13 +16,8 @@ class Entity
   @attributes: null
   @defaults: null
   @tableName: null
-  @rAttributeDelimiter: /[\s,]+/
-
-  @idAttribute: 'id'
-  @statusAttribute: 'is_deleted'
 
   constructor: (attributes) ->
-    @constructor.preprocessClassVariables()
     attributes = {} if not _.isObject(attributes) or _.isArray(attributes)
     attributes = @filterAttributes attributes
     defaults = @constructor.defaults
@@ -90,11 +85,11 @@ class Entity
     @
 
   remove: (cb) ->
-    @set @constructor.statusAttribute, yes
+    @set 'is_deleted', yes
     @save cb
 
   removeSync: ->
-    @set @constructor.statusAttribute, yes
+    @set 'is_deleted', yes
     @saveSync()
 
   insert: (cb) ->
@@ -123,18 +118,9 @@ class Entity
   @db: ->
     db || (db = new Db.Adapter registry.get('db'))
 
-  @preprocessClassVariables: ->
-    return if @__preprocessed
-    @attributes = @attributes.split(@rAttributeDelimiter) if _.isString @attributes
-
-    @attributes.unshift 'id' unless 'id' in @attributes
-    @attributes.push @statusAttribute unless @statusAttribute in @attributes
-
-    @__preprocessed = yes
-
   @newSelect: ->
     select = @db().select @attributes
-    select.where @statusAttribute + ' = 0'
+    select.where 'is_deleted = 0'
     select
 
   @pullSelect: ->
