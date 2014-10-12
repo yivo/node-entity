@@ -25,8 +25,7 @@ class Entity
     @constructor.preprocessClassVariables()
     attributes = {} if not _.isObject(attributes) or _.isArray(attributes)
 
-    @id = @attributes.id
-    delete @attributes.id
+    @id = attributes.id
 
     @attributes = @filterAttributes attributes
 
