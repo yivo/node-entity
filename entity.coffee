@@ -87,7 +87,6 @@ class Entity
       @insertSync()
     else if @isDirty()
       @updateSync()
-    @__changes = null
     @
 
   remove: (cb) ->
@@ -114,10 +113,12 @@ class Entity
   insertSync: ->
     [o] = @db().insert.sync @db(), @tableName(), @querySerialize()
     @attributes.id = o.insertId if o.insertId
+    @__changes = null
 
   updateSync: ->
     tbl = @tableName()
     @db().where(id: @id()).update.sync @db(), tbl, @querySerializeChanges()
+    @__changes = null
 
   @db: ->
     db || (db = new Db.Adapter registry.get('db'))
