@@ -100,7 +100,7 @@ class Entity
   insert: (cb) ->
     @db().insert @tableName(), @querySerialize(), (err, o) =>
       unless err
-        @attributes.id = o.insertId if o.insertId
+        @attributes.id = o.insertId if o and o.insertId
         @__changes = null
       cb err, o if _.isFunction cb
 
@@ -112,7 +112,7 @@ class Entity
 
   insertSync: ->
     [o] = @db().insert.sync @db(), @tableName(), @querySerialize()
-    @attributes.id = o.insertId if o.insertId
+    @attributes.id = o.insertId if o and o.insertId
     @__changes = null
 
   updateSync: ->
